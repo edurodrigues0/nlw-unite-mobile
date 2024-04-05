@@ -1,7 +1,8 @@
+import { colors } from "@/styles/colors";
 import { ReactNode } from "react";
 import { TextInput, View, TextInputProps } from "react-native";
 
-interface InputProps {
+type InputProps = {
   children: ReactNode
 }
 
@@ -16,7 +17,8 @@ function Input({ children }: InputProps) {
 function Field({ ...rest }: TextInputProps) {
   return (
     <TextInput 
-      className="flex-1 text-white text-base font-regular placeholder:text-gray-200"
+      className="flex-1 text-white text-base font-regular"
+      placeholderTextColor={colors.gray[200]}
       {...rest}
     />
   )
