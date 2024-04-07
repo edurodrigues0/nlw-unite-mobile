@@ -1,22 +1,64 @@
 import { View, Image, StatusBar, Alert } from 'react-native'
 import { FontAwesome6, MaterialIcons } from '@expo/vector-icons'
 import { Link, router } from 'expo-router'
+import { useState } from 'react'
+import axios from 'axios'
 
 import { colors } from '@/styles/colors'
 import { Input } from '@/components/input'
 import { Button } from '@/components/button'
-import { useState } from 'react'
+
+import { api } from '@/server/api'
+import { useBadgeStore } from '@/store/badge-store'
 
 export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  function handleRegister() {
-    if (!name.trim() || !email.trim()) {
-      return Alert.alert('Inscrição', 'Preencha todos os campos!')
+  const badgeStore = useBadgeStore()
+
+  const EVENT_ID = '0b1bcff2-c8e4-48e8-bbaf-7b4920f4d051'
+
+  async function handleRegister() {
+    try {
+      if (!name.trim() || !email.trim()) {
+        return Alert.alert('Inscrição', 'Preencha todos os campos!')
+      }
+      setIsLoading(true)
+
+      const registerResponse = await api.post(`/events/${EVENT_ID}/attendees`, {
+        name,
+        email,
+      })
+
+      if (registerResponse.data.attendee_id) {
+        const badgeRespose = await api.get(
+          `/attendee/${registerResponse.data.attendee_id}/badge`,
+        )
+
+        badgeStore.save(badgeRespose.data.badge)
+
+        Alert.alert('Inscrição', 'Inscrição realizada com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => router.push('/ticket'),
+          },
+        ])
+      }
+    } catch (error) {
+      console.log(error)
+      setIsLoading(false)
+      if (axios.isAxiosError(error)) {
+        if (
+          String(error.response?.data.message).includes('already registered')
+        ) {
+          return Alert.alert('Inscrição', 'Este e-mail já está cadastrado')
+        }
+      }
+
+      Alert.alert('Inscrição', 'Não foi possível fazer a inscrição')
     }
-
-    router.push('/ticket')
   }
 
   return (
@@ -24,6 +66,7 @@ export default function Register() {
       <StatusBar barStyle="light-content" />
 
       <Image
+        alt="Imagem de logo do app"
         source={require('@/assets/logo.png')}
         className="h-16"
         resizeMode="contain"
@@ -52,7 +95,11 @@ export default function Register() {
           />
         </Input>
 
-        <Button title="Realizar inscrição" onPress={() => handleRegister()} />
+        <Button
+          title="Realizar inscrição"
+          onPress={() => handleRegister()}
+          isLoading={isLoading}
+        />
         <Link
           href="/"
           className="text-gray-100 text-base font-bold text-center mt-8"
